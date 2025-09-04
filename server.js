@@ -18,19 +18,18 @@ const app = express();
 // This middleware allows our API to parse JSON data from incoming requests.
 app.use(express.json());
 
-// This is the CORS middleware. We configure it to allow any origin.
-app.use(cors());
+// This is the CORS middleware. We'll configure it to use our environment variable
+// for the allowed origin, which is necessary for a deployed API.
+const corsOptions = {
+    origin: process.env.CORS_ORIGIN,
+    optionsSuccessStatus: 200 // For legacy browsers
+};
+app.use(cors(corsOptions));
 
-// --- Database Connection --- 
+// --- Database Connection ---
 // This is where we'll connect to our MongoDB database.
-// You need to have a MongoDB instance running, either locally or a cloud service.
-// We'll use the MONGODB_URI from our .env file for production-ready code.
-
+// We'll use the MONGODB_URI from our .env file.
 const MONGODB_URI = process.env.MONGODB_URI;
-
-/**
- * eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4Yjk5M2Q4N2ViNWIyYzM5NmM5YzJkOSIsImlhdCI6MTc1Njk5MzEzMywiZXhwIjoxNzU2OTk2NzMzfQ.Fu8-6QOO0PNZX7ywJGttaBr2C4jYZCYRmgY_swI5eZg
- */
 
 mongoose
   .connect(MONGODB_URI)
@@ -42,7 +41,12 @@ mongoose
 // All routes inside `authRoutes` will be prefixed with `/api/auth`.
 app.use("/api/auth", authRoutes);
 
-// --- Start the Server ---
+// --- Protected route to test authentication ---
+app.get('/api/auth/protected', (req, res) => {
+    res.status(200).send({ message: 'You are here? That means the authentication system is working!' });
+});
+
+// --- Start the Server  ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
