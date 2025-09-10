@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+    select: false, // Prevents password from being returned in queries by default
   },
   isVerified: {
     type: Boolean,
