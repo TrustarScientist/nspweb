@@ -1,7 +1,7 @@
 // This file contains the logic for sending verification emails using the official SendGrid library.
 
 const sgMail = require('@sendgrid/mail');
-require("dotenv").config();
+
 
 // Set the API key directly on the SendGrid Mailer object.
 // The API key is retrieved from your environment variables.
