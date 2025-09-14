@@ -1,28 +1,35 @@
 // We import the necessary modules.
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const User = require('../models/User');
 
-// --- JWT Middleware to Protect Routes ---
-// This is a special function that we'll use on routes that require authentication.
-// It checks if the request has a valid JWT in its header.
-exports.authenticateToken = (req, res, next) => {
-  // Get the 'Authorization' header from the request. It should look like 'Bearer <token>'.
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+exports.authenticateToken = async (req, res, next) => {
+    // We get the token from the request header.
+    const authHeader = req.headers['authorization'];
+    // We get the token by splitting the Bearer token.
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (token == null) {
-    // If there's no token, the user is unauthorized.
-    return res.status(401).json({ message: 'Authorization token not found.' });
-  }
-
-  // Verify the token using the secret key.
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      // If the token is invalid or expired, return a forbidden error.
-      return res.status(403).json({ message: 'Invalid or expired token.' });
+    // If there is no token, we return a 401 Unauthorized status.
+    if (!token) {
+        return res.status(401).json({ message: 'Authentication failed. No token provided.' });
     }
-    // If the token is valid, we attach the user's information to the request object.
-    req.user = user;
-    next(); // Proceed to the next middleware or route handler.
-  });
+
+    try {
+        // We verify the token using the secret key.
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // We find the user by ID and explicitly select the sensitive fields to be returned.
+        const user = await User.findById(decoded.id).select('+username +email +phoneNumber +isVerified');
+
+        // If the user is not found, we return a 404 Not Found status.
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // We attach the user object to the request.
+        req.user = user;
+        next();
+    } catch (error) {
+        // If the token is invalid or expired, we return a 403 Forbidden status.
+        res.status(403).json({ message: 'Authentication failed. Invalid or expired token.' });
+    }
 };
