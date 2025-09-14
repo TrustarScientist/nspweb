@@ -33,4 +33,9 @@ router.get('/current_user', authenticateToken, (req, res) => {
   });
 });
 
+// use POST for a state-changing action.
+router.post('/logout', authenticateToken, (req, res) => {
+    res.status(200).json({ message: 'Logged out successfully' });
+});
+
 module.exports = router;
