@@ -1,36 +1,35 @@
-// I want to import the necessary modules.
-const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-const { authenticateToken } = require('../middleware/auth');
+// We import the necessary modules.
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// --- API Routes ---
+exports.authenticateToken = async (req, res, next) => {
+    // We get the token from the request header.
+    const authHeader = req.headers['authorization'];
+    // We get the token by splitting the Bearer token.
+    const token = authHeader && authHeader.split(' ')[1];
 
-// 1. User Registration Route
-router.post('/register', authController.register);
+    // If there is no token, we return a 401 Unauthorized status.
+    if (!token) {
+        return res.status(401).json({ message: 'Authentication failed. No token provided.' });
+    }
 
-// 2. User Login Route
-router.post('/login', authController.login);
+    try {
+        // We verify the token using the secret key.
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-// 3. New User Verification Route
-router.get('/verify-account/:token', authController.verifyAccount);
+        // We find the user by ID and explicitly select the sensitive fields to be returned.
+        const user = await User.findById(decoded.id).select('+username +email +phoneNumber +isVerified');
 
-// 4. A Protected Route (for demonstration purposes)
-router.get('/dashboard', authenticateToken, (req, res) => {
-  res.status(200).json({
-    message: 'You are authenticated! Welcome to your Private Dashboard',
-    userId: req.user.id,
-  });
-});
+        // If the user is not found, we return a 404 Not Found status.
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
 
-router.get('/current_user', authenticateToken, (req, res) => {
-  res.status(200).json({
-    id: req.user.id,
-    username: req.user.username,
-    email: req.user.email,
-    phone: req.user.phoneNumber,
-    verified: req.user.isVerified,
-  });
-});
-
-module.exports = router;
+        // We attach the user object to the request.
+        req.user = user;
+        next();
+    } catch (error) {
+        // If the token is invalid or expired, we return a 403 Forbidden status.
+        res.status(403).json({ message: 'Authentication failed. Invalid or expired token.' });
+    }
+};
