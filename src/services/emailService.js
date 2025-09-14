@@ -1,7 +1,7 @@
 // This file contains the logic for sending verification emails using the official SendGrid library.
 
 const sgMail = require('@sendgrid/mail');
-
+require('dotenv').config();
 // Set the API key directly on the SendGrid Mailer object.
 // The API key is retrieved from your environment variables.
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -12,10 +12,10 @@ exports.sendVerificationEmail = async (email, link) => {
     const mailOptions = {
       from: process.env.EMAIL_USER, // Replace with the email address you verified with SendGrid
       to: email, // The recipient's email address
-      subject: 'Ksharer Account Verification',
+      subject: 'VirtualSIM Account Verification',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2 style="color: #333;">Welcome to Ksharer!</h2>
+          <h2 style="color: #333;">Welcome to VirtualSIM!</h2>
           <p>Please click the button below to verify your account and get started.</p>
           <a href="${link}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
             Verify Your Account

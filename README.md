@@ -1,102 +1,106 @@
-Node.js Authentication API
+VirtualSIM Backend API
+This project is a backend API for a phone number generation, subscription, and SMS platform, built to demonstrate core backend development skills for international clients.
+
+The API is built using Node.js and Express.js, with MongoDB as the database. It handles secure user authentication, token management, and is ready for integration with a professional email service for user verification.
+
+🚀 Features
+Secure User Authentication: Users can register and log in securely.
+
+Flexible Login: Supports user login using either a username or email address.
+
+Token-Based Authorization: Uses JSON Web Tokens (JWT) to protect API routes.
+
+User Email Verification: Implements a complete email verification flow to ensure user data integrity.
+
+Email Sending Service: Integrated with SendGrid for reliable email delivery.
+
+Dynamic API Endpoints: Protected routes are now more descriptive and logically organized.
+
+🛠️ Technology Stack
+Node.js: Asynchronous JavaScript runtime.
+
+Express.js: Web application framework for Node.js.
+
+MongoDB: NoSQL database for flexible data storage.
+
+Mongoose: MongoDB object modeling for Node.js.
+
+Bcrypt: Used for secure password hashing.
+
+JSON Web Token (JWT): For token-based authentication.
+
+SendGrid: For professional email delivery.
+
+🔑 Environment Variables
+To run the project, create a .env file in the root directory and add the following variables:
+
+# MongoDB connection URI
+MONGODB_URI=your_mongodb_connection_string
+
+# A secret key for JWT token signing
+JWT_SECRET=your_jwt_secret_key
+
+# SendGrid API Key for email services
+SENDGRID_API_KEY=your_sendgrid_api_key
+
+# The verified sender email address from your SendGrid account
+EMAIL_USER=your_verified_sender_email@example.com
+
+# Allows all origins for local development. Use a specific URL in production.
+CORS_ORIGIN=*
+
+🗺️ API Endpoints
+All API endpoints are prefixed with /api.
+
+Authentication & User Management
+Method
+
+Endpoint
+
 Description
-This project is a simple, yet robust, API for user authentication built with Node.js, Express, and MongoDB. It provides a foundational system for user management, including secure registration and login with JSON Web Tokens (JWTs).
 
-The project is structured in a modular and scalable way, making it easy to add new features like email verification, SMS, and other business logic in the future.
+POST
 
-Features
-User Registration: Securely create new user accounts with a username, email, and password.
+/api/register
 
-User Login: Authenticate users and issue a JSON Web Token (JWT) for subsequent requests.
+Registers a new user.
 
-Password Security: Passwords are automatically hashed and salted using bcrypt before being stored in the database.
+POST
 
-Token-Based Authentication: Uses JWTs for stateless and secure authentication.
+/api/login
 
-Cross-Origin Resource Sharing (CORS): Configured to allow requests from any frontend domain.
+Authenticates a user and returns a JWT. The response also includes the username.
 
-Modular Structure: Code is organized into dedicated folders for routes, controllers, models, and middleware, following a common Node.js pattern.
+GET
 
-Prerequisites
-Before you begin, ensure you have the following installed on your machine:
+/api/verify-account/:token
 
-Node.js: A JavaScript runtime environment.
+Verifies a user's email address using a unique token.
 
-npm: The Node.js package manager (comes with Node.js).
+Protected Routes (Requires JWT in Authorization header)
+Method
 
-MongoDB: A running MongoDB instance, either locally or a cloud service like MongoDB Atlas.
+Endpoint
 
-Getting Started
-Clone the project files:
-If you're starting from scratch, set up the project files as we have discussed.
+Description
 
-Install dependencies:
-Navigate to your project folder in the terminal and install the required packages.
+GET
 
-npm install
+/api/dashboard
 
-Configure environment variables:
-Create a file named .env in the root of your project and add the following:
+A protected route that returns a welcome message to the authenticated user.
 
-MONGODB_URI=mongodb://localhost:27017/node-auth-db
-JWT_SECRET=your_super_secret_key_here
+GET
 
-Note: Replace your_super_secret_key_here with a long, random string. This is crucial for security.
+/api/current_user
 
-Run the server:
-Start the server from your terminal.
+A protected route that returns the authenticated user's details.
 
-node server.js
+🚀 Getting Started
+Clone the repository: git clone <repository_url>
 
-The server will start on port 5000 by default.
+Install dependencies: npm install
 
-API Endpoints
-You can test these endpoints using a tool like Postman or cURL.
+Set up environment variables: Create and configure your .env file.
 
-POST /api/auth/register
-Register a new user.
-
-Request Body:
-
-{
-  "username": "testuser",
-  "email": "test@example.com",
-  "password": "password123"
-}
-
-Success Response: Status: 201 Created
-
-{
-  "message": "User registered successfully!"
-}
-
-POST /api/auth/login
-Log in an existing user and receive a JWT.
-
-Request Body:
-
-{
-  "username": "testuser",
-  "password": "password123"
-}
-
-Success Response: Status: 200 OK
-
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "message": "Login successful!"
-}
-
-GET /api/auth/protected
-Access a protected route. Requires an Authorization header.
-
-Request Headers:
-
-Authorization: Bearer <your_jwt_token>
-
-Success Response: Status: 200 OK
-
-{
-  "message": "Welcome to the protected route! You are authenticated.",
-  "userId": "60e9c8f0f0e0d1e5c4a5b6c7"
-}
+Run the server: npm start
