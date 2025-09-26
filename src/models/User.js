@@ -1,55 +1,60 @@
-// We'll import mongoose to define our schema and model.
+// We import the necessary Mongoose modules.
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
-// --- User Schema and Model ---
-// This is our blueprint for user documents in MongoDB.
-// I've added email, phoneNumber, isVerified, and a verificationToken for later.
+// We define the schema for the User model.
 const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    // A simple regex for email validation.
-    match: /.+\@.+\..+/,
-  },
-  phoneNumber: {
-    type: String,
-    required: false, // I make this required later for SMS verification
-    unique: true,
-    sparse: true, // Allows for multiple documents to have a null value
-  },
-  password: {
-    type: String,
-    required: true,
-    select: false, // Prevents password from being returned in queries by default
-  },
-  isVerified: {
-    type: Boolean,
-    default: false,
-  },
-  verificationToken: String,
-  verificationTokenExpires: Date,
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        minlength: 3,
+    },
+    firstName: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    lastName: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+    },
+    password: {
+        type: String,
+        required: true,
+        select: false, // Prevents password from being returned in queries by default
+    },
+    phoneNumber: {
+        type: String,
+        trim: true,
+        default: null,
+        select: false, // Security: only retrieve when explicitly requested
+    },
+}, { timestamps: true });
+
+// Middleware to hash the password before saving the user document.
+userSchema.pre('save', async function (next) {
+    if (this.isModified('password')) {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
 });
 
-// A pre-save hook that runs before a document is saved.
-// This is where we will hash the password to protect it.
-userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified or is new.
-  if (!this.isModified('password')) {
-    return next();
-  }
-  // Generate a salt and hash the password.
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+// Method to compare candidate password with the hashed password.
+userSchema.methods.comparePassword = function (candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
 
-// exporting the Mongoose model to make it visible for others.
+// We create the User model from the schema.
 const User = mongoose.model('User', userSchema);
 module.exports = User;

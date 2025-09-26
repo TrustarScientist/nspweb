@@ -1,109 +1,96 @@
-// We import the User model and other necessary modules.
+// We import the necessary modules.
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const emailService = require('../services/emailService'); // Our new email service
 
-// --- Controller Functions ---
-
-// 1. User Registration (Updated)
-exports.register = async (req, res) => {
-  try {
-    const { username, password, email, phoneNumber } = req.body;
-
-    // Check if a user with this username or email already exists.
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Username or email already exists.' });
-    }
-
-    // Create a unique token and set its expiration
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenExpires = Date.now() + 3600000; // Token expires in 1 hour
-
-    // Create a new user instance with the verification token and expiration
-    const newUser = new User({
-      username,
-      password, // Your schema's pre-save hook will handle the hashing
-      email,
-      phoneNumber,
-      isVerified: false,
-      verificationToken,
-      verificationTokenExpires,
-    });
-    await newUser.save();
-
-    // Send the verification email to the user.
-    const verificationLink = `http://${req.headers.host}/api/auth/verify-account/${verificationToken}`;
-    await emailService.sendVerificationEmail(newUser.email, verificationLink);
-
-    res.status(201).json({ message: 'User registered successfully! Please check your email to verify your account.' });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during registration.' });
-  }
+// --- Helper function to generate a JWT ---
+// The token includes essential user data for authentication and personalization.
+const generateToken = (user) => {
+    return jwt.sign(
+        { id: user._id, username: user.username, email: user.email, firstName: user.firstName },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' } // Token expires in 7 days
+    );
 };
 
-// 2. User Login (Updated to check for verification)
-exports.login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
+// --- 1. User Registration Controller ---
+// Creates a new user and immediately logs them in.
+register = async (req, res) => {
+    try {
+        const { username, firstName, lastName, email, password } = req.body;
 
-    // Find the user by their username and select the password field.
-    const user = await User.findOne({ username }).select('+password');
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials.' });
+        // 1. Check if user already exists
+        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with that username or email already exists.' });
+        }
+
+        // 2. Create the new user (password is automatically hashed by Mongoose middleware)
+        const newUser = new User({ username, firstName, lastName, email, password });
+        await newUser.save();
+
+        // 3. IMMEDIATE LOGIN: Generate a JWT for the newly registered user
+        const token = generateToken(newUser);
+
+        // 4. Return success response with token and essential user details
+        res.status(201).json({
+            message: 'Registration successful. User is now logged in.',
+            token,
+            userId: newUser._id,
+            username: newUser.username,
+            firstName: newUser.firstName,
+        });
+    } catch (error) {
+        console.error('Error during registration:', error);
+        res.status(500).json({ message: 'Server error during registration.' });
     }
-
-    // Check if the account is verified.
-    if (!user.isVerified) {
-      return res.status(400).json({ message: 'Please verify your email address before logging in.' });
-    }
-
-    // Compare the provided password with the hashed password in the database.
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials.' });
-    }
-
-    // If the passwords match, create a JWT.
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.status(200).json({ token, username : user.username , message: 'Login successful!' });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during login.' });
-  }
 };
 
-// 3. User Account Verification (New)
-exports.verifyAccount = async (req, res) => {
-  const { token } = req.params;
+// --- 2. User Login Controller ---
+// Allows login using either username or email address.
+login = async (req, res) => {
+    try {
+        const { loginIdentifier, password } = req.body;
 
-  try {
-    const user = await User.findOne({
-      verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() },
-    });
+        // 1. Find the user by username OR email, and explicitly select the password hash
+        const user = await User.findOne({
+            $or: [
+                { username: loginIdentifier },
+                { email: loginIdentifier }
+            ]
+        }).select('+password');
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification link.' });
+        // 2. Check if user exists
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials.' });
+        }
+
+        // 3. Compare passwords
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid credentials.' });
+        }
+
+        // 4. Generate JWT
+        const token = generateToken(user);
+
+        // 5. Return success response with token and username
+        res.status(200).json({
+            message: 'Login successful.',
+            token,
+            userId: user._id,
+            username: user.username,
+            firstName: user.firstName,
+        });
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).json({ message: 'Server error during login.' });
     }
+};
 
-    // Mark the account as verified and clear the token fields.
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
+// --- (The verifyAccount function has been removed) ---
 
-    await user.save();
-
-    res.status(200).json({ message: 'Account verified successfully! You can now log in.' });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during account verification.' });
-  }
+module.exports = {
+    register,
+    login,
+    // verifyAccount is no longer exported
 };

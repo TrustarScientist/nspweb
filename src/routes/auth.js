@@ -12,8 +12,6 @@ router.post('/register', authController.register);
 // 2. User Login Route
 router.post('/login', authController.login);
 
-// 3. New User Verification Route
-router.get('/verify-account/:token', authController.verifyAccount);
 
 // 4. A Protected Route (for demonstration purposes)
 router.get('/dashboard', authenticateToken, (req, res) => {
